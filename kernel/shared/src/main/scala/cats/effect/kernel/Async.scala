@@ -16,16 +16,15 @@
 
 package cats.effect.kernel
 
-import cats.{~>, Monoid, Semigroup}
 import cats.arrow.FunctionK
-import cats.data.{EitherT, Ior, IorT, Kleisli, OptionT, WriterT}
+import cats.data._
 import cats.implicits._
-
-import scala.annotation.{nowarn, tailrec}
-import scala.concurrent.{ExecutionContext, Future}
+import cats.{Monoid, Semigroup, ~>}
 
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicReference
+import scala.annotation.{nowarn, tailrec}
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * A typeclass that encodes the notion of suspending asynchronous side effects in the `F[_]`
@@ -192,12 +191,28 @@ trait Async[F[_]] extends AsyncPlatform[F] with Sync[F] with Temporal[F] {
     }
 
   /**
+   * [[Async.evalOnExecutor]] as a natural transformation.
+   */
+  def evalOnExecutorK(executor: Executor): F ~> F =
+    new (F ~> F) {
+      def apply[A](fa: F[A]): F[A] = evalOnExecutor(fa, executor)
+    }
+
+  /**
    * Start a new fiber on a different execution context.
    *
    * See [[GenSpawn.start]] for more details.
    */
   def startOn[A](fa: F[A], ec: ExecutionContext): F[Fiber[F, Throwable, A]] =
     evalOn(start(fa), ec)
+
+  /**
+   * Start a new fiber on a different executor.
+   *
+   * See [[GenSpawn.start]] for more details.
+   */
+  def startOnExecutor[A](fa: F[A], executor: Executor): F[Fiber[F, Throwable, A]] =
+    evalOnExecutor(start(fa), executor)
 
   /**
    * Start a new background fiber on a different execution context.
@@ -208,6 +223,16 @@ trait Async[F[_]] extends AsyncPlatform[F] with Sync[F] with Temporal[F] {
       fa: F[A],
       ec: ExecutionContext): Resource[F, F[Outcome[F, Throwable, A]]] =
     Resource.make(startOn(fa, ec))(_.cancel)(this).map(_.join)
+
+  /**
+   * Start a new background fiber on a different executor.
+   *
+   * See [[GenSpawn.background]] for more details.
+   */
+  def backgroundOnExecutor[A](
+      fa: F[A],
+      executor: Executor): Resource[F, F[Outcome[F, Throwable, A]]] =
+    Resource.make(startOnExecutor(fa, executor))(_.cancel)(this).map(_.join)
 
   /**
    * Obtain a reference to the current execution context.
