@@ -16,14 +16,6 @@
 
 package cats.effect
 
-import cats.data.Ior
-import cats.effect.IO.executionContext
-import cats.effect.instances.spawn
-import cats.effect.kernel.CancelScope
-import cats.effect.kernel.GenTemporal.handleDuration
-import cats.effect.std.{Backpressure, Console, Env, Supervisor, UUIDGen}
-import cats.effect.tracing.{Tracing, TracingEvent}
-import cats.syntax.all._
 import cats.{
   Align,
   Alternative,
@@ -42,14 +34,23 @@ import cats.{
   StackSafeMonad,
   Traverse
 }
+import cats.data.Ior
+import cats.effect.IO.executionContext
+import cats.effect.instances.spawn
+import cats.effect.kernel.CancelScope
+import cats.effect.kernel.GenTemporal.handleDuration
+import cats.effect.std.{Backpressure, Console, Env, Supervisor, UUIDGen}
+import cats.effect.tracing.{Tracing, TracingEvent}
+import cats.syntax.all._
+
+import scala.annotation.unchecked.uncheckedVariance
+import scala.concurrent._
+import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
+import scala.util.control.NonFatal
 
 import java.util.UUID
 import java.util.concurrent.Executor
-import scala.annotation.unchecked.uncheckedVariance
-import scala.concurrent.duration._
-import scala.concurrent._
-import scala.util.control.NonFatal
-import scala.util.{Failure, Success, Try}
 
 /**
  * A pure abstraction representing the intention to perform a side effect, where the result of
